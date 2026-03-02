@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Wavelet Transform — A Visual Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0c10;
+  --bg-card: #11141b;
+  --bg-card-alt: #161b26;
+  --text: #e2e4e9;
+  --text-dim: #8a8f9c;
+  --accent: #4fc3f7;
+  --accent2: #ab47bc;
+  --accent3: #66bb6a;
+  --accent4: #ffa726;
+  --border: #1e2330;
+  --glow: rgba(79, 195, 247, 0.15);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Source Sans 3', sans-serif;
+  font-weight: 400;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* ── Hero ── */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 2rem;
+}
+.hero-bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(79,195,247,0.08), transparent),
+    radial-gradient(ellipse 60% 50% at 20% 70%, rgba(171,71,188,0.06), transparent),
+    radial-gradient(ellipse 50% 40% at 80% 60%, rgba(102,187,106,0.05), transparent);
+  z-index: 0;
+}
+.hero canvas {
+  position: absolute; inset: 0; z-index: 1; opacity: 0.35;
+}
+.hero-content {
+  position: relative; z-index: 2;
+  text-align: center;
+  max-width: 800px;
+  animation: fadeUp 1.2s ease-out;
+}
+.hero h1 {
+  font-family: 'Instrument Serif', serif;
+  font-size: clamp(3rem, 7vw, 5.5rem);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: 1rem;
+}
+.hero h1 em {
+  font-style: italic;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.hero p {
+  font-size: 1.2rem;
+  color: var(--text-dim);
+  max-width: 520px;
+  margin: 0 auto 2.5rem;
+  font-weight: 300;
+}
+.hero-arrow {
+  animation: bobDown 2s ease-in-out infinite;
+  color: var(--accent);
+  opacity: 0.6;
+  font-size: 1.5rem;
+}
+
+@keyframes fadeUp {
+  from { opacity:0; transform: translateY(40px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+@keyframes bobDown {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(12px); }
+}
+
+/* ── Layout ── */
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+section {
+  padding: 6rem 0;
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+section.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Typography ── */
+h2 {
+  font-family: 'Instrument Serif', serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 400;
+  margin-bottom: 0.5rem;
+  line-height: 1.2;
+}
+h2 .num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5em;
+  color: var(--accent);
+  vertical-align: super;
+  margin-right: 0.3em;
+}
+h3 {
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 1.5rem;
+}
+p { margin-bottom: 1.25rem; }
+p.lead {
+  font-size: 1.1rem;
+  color: var(--text-dim);
+}
+
+/* ── Cards & Canvases ── */
+.canvas-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  position: relative;
+  overflow: hidden;
+}
+.canvas-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.4;
+}
+.canvas-card canvas {
+  width: 100%;
+  display: block;
+  border-radius: 8px;
+}
+.canvas-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-top: 0.75rem;
+  text-align: center;
+}
+
+/* ── Controls ── */
+.controls {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 1rem 0;
+  align-items: center;
+}
+.controls label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+.controls input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+  width: 160px;
+}
+.controls input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px; height: 16px;
+  background: var(--accent);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 0.4rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+.btn.active {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+/* ── Comparison Grid ── */
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+@media (max-width: 640px) {
+  .compare-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Key Concept Boxes ── */
+.concept-box {
+  background: var(--bg-card-alt);
+  border-left: 3px solid var(--accent);
+  padding: 1.25rem 1.5rem;
+  border-radius: 0 12px 12px 0;
+  margin: 1.5rem 0;
+}
+.concept-box.purple { border-left-color: var(--accent2); }
+.concept-box.green  { border-left-color: var(--accent3); }
+.concept-box.orange { border-left-color: var(--accent4); }
+.concept-box strong {
+  font-weight: 600;
+}
+
+/* ── Equation ── */
+.equation {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.95rem;
+  color: var(--accent);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  margin: 1.5rem 0;
+  text-align: center;
+  overflow-x: auto;
+}
+
+/* ── TOC ── */
+.toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 2rem 0 0;
+}
+.toc a {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  padding: 0.35rem 0.8rem;
+  border-radius: 20px;
+  transition: all 0.2s;
+}
+.toc a:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ── Steps / Process ── */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 2rem 0;
+}
+.step {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+  position: relative;
+}
+.step .step-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--accent);
+  opacity: 0.3;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+.step p {
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* ── Footer ── */
+footer {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<section class="hero visible">
+  <div class="hero-bg"></div>
+  <canvas id="heroCanvas"></canvas>
+  <div class="hero-content">
+    <h1>The <em>Wavelet</em> Transform</h1>
+    <p>A visual, interactive guide to understanding how wavelets decompose signals in both time and frequency.</p>
+    <div class="toc">
+      <a href="#intuition">Intuition</a>
+      <a href="#fourier-vs-wavelet">Fourier vs Wavelet</a>
+      <a href="#mother-wavelets">Mother Wavelets</a>
+      <a href="#cwt">CWT</a>
+      <a href="#dwt">DWT</a>
+      <a href="#multiresolution">Multiresolution</a>
+      <a href="#applications">Applications</a>
+    </div>
+  </div>
+  <div class="hero-arrow">▼</div>
+</section>
+
+<!-- ═══════════════ 1. INTUITION ═══════════════ -->
+<section id="intuition">
+  <div class="container">
+    <h3>Chapter 1</h3>
+    <h2><span class="num">01</span> The Core Intuition</h2>
+    <p class="lead">A wavelet is a short, wave-like oscillation that starts at zero, oscillates, and returns to zero. Unlike infinite sine waves, wavelets are <strong>localised</strong> in both time and frequency.</p>
+    <p>The wavelet transform works by sliding a wavelet along a signal and computing the correlation at each point. By stretching (scaling) the wavelet, we capture different frequency components. Short wavelets catch high-frequency detail; stretched wavelets capture the slow-moving trend.</p>
+
+    <div class="canvas-card">
+      <canvas id="cIntuit" height="280"></canvas>
+      <div class="controls">
+        <label>Scale: <span id="scaleVal">1.0</span></label>
+        <input type="range" id="scaleSlider" min="0.3" max="4" step="0.1" value="1.0">
+        <label style="margin-left:1rem;">Position: <span id="posVal">0</span></label>
+        <input type="range" id="posSlider" min="-3" max="3" step="0.05" value="0">
+      </div>
+      <div class="canvas-label">Drag scale to stretch the wavelet · Drag position to translate it along the signal</div>
+    </div>
+
+    <div class="concept-box">
+      <strong>Key idea:</strong> The wavelet transform measures <em>how much</em> a wavelet at a given scale and position resembles the local structure of the signal. High correlation → the signal contains energy at that frequency, at that moment in time.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 2. FOURIER vs WAVELET ═══════════════ -->
+<section id="fourier-vs-wavelet">
+  <div class="container">
+    <h3>Chapter 2</h3>
+    <h2><span class="num">02</span> Fourier vs Wavelet</h2>
+    <p class="lead">The Fourier Transform tells you <em>which</em> frequencies exist, but not <em>when</em> they occur. The Wavelet Transform gives you both.</p>
+    <p>Consider a signal whose frequency changes over time — a chirp. The Fourier spectrum shows a broad band of frequencies with no timing information. The wavelet scalogram shows exactly when each frequency appears.</p>
+
+    <div class="canvas-card">
+      <canvas id="cChirp" height="160"></canvas>
+      <div class="canvas-label">Chirp signal — frequency sweeps from low to high</div>
+    </div>
+
+    <div class="compare-grid">
+      <div class="canvas-card">
+        <canvas id="cFFT" height="200"></canvas>
+        <div class="canvas-label">Fourier power spectrum — no time information</div>
+      </div>
+      <div class="canvas-card">
+        <canvas id="cScalogram" height="200"></canvas>
+        <div class="canvas-label">Wavelet scalogram — time × frequency map</div>
+      </div>
+    </div>
+
+    <div class="concept-box purple">
+      <strong>The uncertainty principle:</strong> You can't have perfect resolution in both time and frequency simultaneously. Wavelets offer an optimal trade-off — good time resolution at high frequencies, good frequency resolution at low frequencies.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 3. MOTHER WAVELETS ═══════════════ -->
+<section id="mother-wavelets">
+  <div class="container">
+    <h3>Chapter 3</h3>
+    <h2><span class="num">03</span> Mother Wavelets</h2>
+    <p class="lead">Different wavelet shapes are suited to different signal characteristics. The choice of mother wavelet determines what features the transform is sensitive to.</p>
+
+    <div class="canvas-card">
+      <canvas id="cWavelets" height="340"></canvas>
+      <div class="controls" id="waveletBtns">
+        <button class="btn active" data-w="morlet">Morlet</button>
+        <button class="btn" data-w="haar">Haar</button>
+        <button class="btn" data-w="mexhat">Mexican Hat</button>
+        <button class="btn" data-w="db4">Daubechies-4</button>
+      </div>
+      <div class="canvas-label">Click to explore different mother wavelet families</div>
+    </div>
+
+    <div class="concept-box green">
+      <strong>Morlet:</strong> A complex sinusoid modulated by a Gaussian. Excellent for time-frequency analysis of smooth, oscillatory signals. Widely used in geophysics and neuroscience.
+    </div>
+    <div class="concept-box orange">
+      <strong>Haar:</strong> The simplest wavelet — a step function. Perfect for detecting sharp transitions and edges. It's the foundation of the Discrete Wavelet Transform.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 4. CWT ═══════════════ -->
+<section id="cwt">
+  <div class="container">
+    <h3>Chapter 4</h3>
+    <h2><span class="num">04</span> Continuous Wavelet Transform</h2>
+    <p class="lead">The CWT convolves the signal with scaled and translated copies of the mother wavelet at every point, producing a 2D time-scale map.</p>
+
+    <div class="equation">
+      W(a, b) = (1/√a) · ∫ x(t) · ψ*( (t − b) / a ) dt
+    </div>
+    <p>Here <strong>a</strong> is the scale (inversely related to frequency), <strong>b</strong> is the translation (position in time), and <strong>ψ</strong> is the mother wavelet.</p>
+
+    <div class="canvas-card">
+      <canvas id="cCWT" height="360"></canvas>
+      <div class="controls">
+        <button class="btn active" id="cwtPlay">▶ Animate</button>
+        <button class="btn" id="cwtReset">Reset</button>
+        <label style="margin-left:1rem;">Speed:</label>
+        <input type="range" id="cwtSpeed" min="0.5" max="3" step="0.25" value="1">
+      </div>
+      <div class="canvas-label">Watch the wavelet slide across the signal, building the scalogram row by row</div>
+    </div>
+
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><p>Choose a scale <em>a</em> (stretch the wavelet)</p></div>
+      <div class="step"><div class="step-num">2</div><p>Slide the wavelet across the signal (vary <em>b</em>)</p></div>
+      <div class="step"><div class="step-num">3</div><p>At each point, compute the inner product</p></div>
+      <div class="step"><div class="step-num">4</div><p>Repeat for all scales to build the scalogram</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 5. DWT ═══════════════ -->
+<section id="dwt">
+  <div class="container">
+    <h3>Chapter 5</h3>
+    <h2><span class="num">05</span> Discrete Wavelet Transform</h2>
+    <p class="lead">The DWT samples the CWT at dyadic scales (powers of 2), making it computationally efficient and perfectly invertible — you can reconstruct the original signal exactly.</p>
+    <p>Instead of continuously varying the scale, the DWT uses a filter bank: a low-pass filter (scaling function) captures the approximation, and a high-pass filter (wavelet function) captures the detail. After filtering, the signal is downsampled by 2.</p>
+
+    <div class="canvas-card">
+      <canvas id="cDWT" height="380"></canvas>
+      <div class="controls">
+        <button class="btn active" id="dwtAnimate">▶ Decompose</button>
+        <button class="btn" id="dwtReset">Reset</button>
+      </div>
+      <div class="canvas-label">Animated filter bank decomposition — watch the signal split into approximation + detail at each level</div>
+    </div>
+
+    <div class="equation">
+      Level j: cA_j = downsample( x * h ) &nbsp;&nbsp;|&nbsp;&nbsp; cD_j = downsample( x * g )
+    </div>
+    <p>Where <strong>h</strong> is the low-pass (scaling) filter and <strong>g</strong> is the high-pass (wavelet) filter. The process is repeated on the approximation coefficients.</p>
+  </div>
+</section>
+
+<!-- ═══════════════ 6. MULTIRESOLUTION ═══════════════ -->
+<section id="multiresolution">
+  <div class="container">
+    <h3>Chapter 6</h3>
+    <h2><span class="num">06</span> Multiresolution Analysis</h2>
+    <p class="lead">Wavelets let you see your signal at multiple resolutions simultaneously — like zooming into a map. Each level reveals structure at a different scale.</p>
+
+    <div class="canvas-card">
+      <canvas id="cMRA" height="420"></canvas>
+      <div class="controls">
+        <label>Signal type:</label>
+        <button class="btn active mra-sig" data-s="composite">Composite</button>
+        <button class="btn mra-sig" data-s="step">Step + Sine</button>
+        <button class="btn mra-sig" data-s="noisy">Noisy Sine</button>
+      </div>
+      <div class="canvas-label">Original signal and its wavelet decomposition at 4 levels — approximation + detail coefficients</div>
+    </div>
+
+    <div class="concept-box">
+      <strong>Perfect reconstruction:</strong> Sum the final approximation with all detail levels and you recover the original signal exactly. Nothing is lost — energy is merely redistributed across scales.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 7. APPLICATIONS ═══════════════ -->
+<section id="applications">
+  <div class="container">
+    <h3>Chapter 7</h3>
+    <h2><span class="num">07</span> Real-World Applications</h2>
+    <p class="lead">Wavelets are everywhere — from JPEG 2000 image compression to detecting gravitational waves at LIGO.</p>
+
+    <div class="canvas-card">
+      <canvas id="cDenoise" height="300"></canvas>
+      <div class="controls">
+        <label>Noise level:</label>
+        <input type="range" id="noiseLevel" min="0" max="1" step="0.05" value="0.4">
+        <label style="margin-left:1rem;">Threshold:</label>
+        <input type="range" id="threshold" min="0" max="1" step="0.05" value="0.3">
+        <button class="btn" id="denoiseApply" style="margin-left:1rem;">Apply Denoising</button>
+      </div>
+      <div class="canvas-label">Wavelet denoising — transform → threshold small coefficients → inverse transform</div>
+    </div>
+
+    <div class="steps">
+      <div class="step"><div class="step-num">🔊</div><p><strong>Audio</strong> — denoising, compression (e.g. FBI fingerprint standard)</p></div>
+      <div class="step"><div class="step-num">🖼</div><p><strong>Images</strong> — JPEG 2000, texture analysis, edge detection</p></div>
+      <div class="step"><div class="step-num">🏥</div><p><strong>Medical</strong> — ECG/EEG analysis, tumour detection in MRI</p></div>
+      <div class="step"><div class="step-num">🌍</div><p><strong>Geophysics</strong> — seismic data, climate oscillation analysis</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer>
+  <div class="container">
+    <p>Built with Canvas, mathematics, and care. &nbsp;|&nbsp; <a href="https://github.com" target="_blank">View on GitHub</a></p>
+    <p style="margin-top:0.5rem; opacity:0.5;">All animations run in real-time using the HTML Canvas API. No external libraries required.</p>
+  </div>
+</footer>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SCRIPTS -->
+<!-- ═══════════════════════════════════════════════════ -->
+<script>
+// ── Utility ──
+const TAU = Math.PI * 2;
+const lerp = (a,b,t) => a + (b-a)*t;
+function getCtx(id) {
+  const c = document.getElementById(id);
+  const dpr = window.devicePixelRatio || 1;
+  const rect = c.getBoundingClientRect();
+  c.width = rect.width * dpr;
+  c.height = rect.height * dpr;
+  const ctx = c.getContext('2d');
+  ctx.scale(dpr, dpr);
+  c.style.width = rect.width + 'px';
+  c.style.height = rect.height + 'px';
+  return { ctx, w: rect.width, h: rect.height, canvas: c };
+}
+
+// ── Colors ──
+const COL = {
+  accent: '#4fc3f7', accent2: '#ab47bc', accent3: '#66bb6a', accent4: '#ffa726',
+  bg: '#0a0c10', grid: '#1e2330', text: '#8a8f9c', signal: '#e2e4e9'
+};
+
+// ── Wavelet functions ──
+function morlet(t, s=1) {
+  const x = t/s;
+  return Math.cos(5*x) * Math.exp(-0.5*x*x) / Math.sqrt(s);
+}
+function haar(t, s=1) {
+  const x = t/s;
+  if (x >= 0 && x < 0.5) return 1/Math.sqrt(s);
+  if (x >= 0.5 && x < 1) return -1/Math.sqrt(s);
+  return 0;
+}
+function mexhat(t, s=1) {
+  const x = t/s;
+  return (1 - x*x) * Math.exp(-0.5*x*x) * 2 / (Math.sqrt(3) * Math.pow(Math.PI, 0.25)) / Math.sqrt(s);
+}
+function db4(t, s=1) {
+  const x = t/s;
+  // Approximate db4 shape
+  const h = [0.4829629, 0.8365163, 0.2241439, -0.1294095];
+  let v = 0;
+  for (let i = 0; i < h.length; i++) {
+    const xi = x*4 - i;
+    v += h[i] * Math.exp(-2*xi*xi);
+  }
+  return v / Math.sqrt(s);
+}
+
+const waveletFns = { morlet, haar, mexhat, db4 };
+
+// ── Draw helpers ──
+function drawGrid(ctx, w, h, rows=4, cols=8) {
+  ctx.strokeStyle = COL.grid;
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= cols; i++) {
+    const x = (w/cols)*i;
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke();
+  }
+  for (let i = 0; i <= rows; i++) {
+    const y = (h/rows)*i;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke();
+  }
+}
+
+function drawLine(ctx, points, color, lw=2) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw;
+  ctx.beginPath();
+  points.forEach(([x,y],i) => i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y));
+  ctx.stroke();
+}
+
+function drawFilledLine(ctx, points, color, baseY, alpha=0.15) {
+  ctx.fillStyle = color.replace(')', `,${alpha})`).replace('rgb', 'rgba');
+  if (color.startsWith('#')) {
+    const r = parseInt(color.slice(1,3),16), g = parseInt(color.slice(3,5),16), b = parseInt(color.slice(5,7),16);
+    ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+  }
+  ctx.beginPath();
+  ctx.moveTo(points[0][0], baseY);
+  points.forEach(([x,y]) => ctx.lineTo(x,y));
+  ctx.lineTo(points[points.length-1][0], baseY);
+  ctx.closePath();
+  ctx.fill();
+  drawLine(ctx, points, color, 2);
+}
+
+// ═══════ HERO CANVAS ═══════
+(function() {
+  const c = document.getElementById('heroCanvas');
+  const ctx = c.getContext('2d');
+  let W, H, dpr;
+  function resize() {
+    dpr = window.devicePixelRatio || 1;
+    W = c.parentElement.clientWidth;
+    H = c.parentElement.clientHeight;
+    c.width = W * dpr;
+    c.height = H * dpr;
+    c.style.width = W + 'px';
+    c.style.height = H + 'px';
+    ctx.scale(dpr, dpr);
+  }
+  resize();
+  let t = 0;
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    const nLines = 5;
+    for (let l = 0; l < nLines; l++) {
+      const freq = 0.5 + l * 0.8;
+      const amp = 25 + l * 8;
+      const yBase = H * (0.3 + l * 0.1);
+      const phase = t * (0.3 + l*0.15);
+      const alpha = 0.12 + l * 0.04;
+      const hue = 190 + l * 30;
+      ctx.strokeStyle = `hsla(${hue}, 70%, 65%, ${alpha})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let x = 0; x < W; x += 2) {
+        const env = Math.exp(-Math.pow((x - W/2)/(W*0.35), 2));
+        const y = yBase + Math.sin(x * freq * 0.01 + phase) * amp * env;
+        x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    t += 0.02;
+    requestAnimationFrame(draw);
+  }
+  draw();
+  window.addEventListener('resize', () => { resize(); });
+})();
+
+// ═══════ 1. INTUITION CANVAS ═══════
+(function() {
+  const { ctx, w, h } = getCtx('cIntuit');
+  const scaleSlider = document.getElementById('scaleSlider');
+  const posSlider = document.getElementById('posSlider');
+  const scaleVal = document.getElementById('scaleVal');
+  const posVal = document.getElementById('posVal');
+
+  // Generate a signal
+  function signal(t) {
+    return 0.6*Math.sin(2*t) + 0.3*Math.sin(7*t) + 0.2*Math.cos(4*t+1);
+  }
+
+  function draw() {
+    const s = parseFloat(scaleSlider.value);
+    const b = parseFloat(posSlider.value);
+    scaleVal.textContent = s.toFixed(1);
+    posVal.textContent = b.toFixed(1);
+
+    ctx.clearRect(0,0,w,h);
+    drawGrid(ctx, w, h, 4, 10);
+
+    const sigY = h * 0.3;
+    const wavY = h * 0.72;
+    const tMin = -5, tMax = 5;
+
+    // Signal
+    ctx.fillStyle = COL.text;
+    ctx.font = '12px JetBrains Mono';
+    ctx.fillText('Signal x(t)', 10, sigY - 55);
+    const sigPts = [];
+    for (let px = 0; px < w; px++) {
+      const t = tMin + (tMax-tMin)*(px/w);
+      sigPts.push([px, sigY - signal(t)*50]);
+    }
+    drawFilledLine(ctx, sigPts, COL.signal, sigY, 0.06);
+
+    // Wavelet
+    ctx.fillStyle = COL.accent;
+    ctx.fillText(`Wavelet ψ(t)  scale=${s.toFixed(1)}  pos=${b.toFixed(1)}`, 10, wavY - 55);
+    const wavPts = [];
+    for (let px = 0; px < w; px++) {
+      const t = tMin + (tMax-tMin)*(px/w);
+      wavPts.push([px, wavY - morlet(t - b, s)*50]);
+    }
+    drawFilledLine(ctx, wavPts, COL.accent, wavY, 0.12);
+
+    // Highlight overlap region
+    const bPx = (b - tMin) / (tMax - tMin) * w;
+    const halfW = s * 2.5 / (tMax - tMin) * w;
+    const grad = ctx.createLinearGradient(bPx - halfW, 0, bPx + halfW, 0);
+    grad.addColorStop(0, 'rgba(79,195,247,0)');
+    grad.addColorStop(0.5, 'rgba(79,195,247,0.08)');
+    grad.addColorStop(1, 'rgba(79,195,247,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(bPx - halfW, 0, halfW*2, h);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ═══════ 2. CHIRP + FFT + SCALOGRAM ═══════
+(function() {
+  const N = 512;
+  // Chirp signal
+  const chirp = new Float64Array(N);
+  for (let i = 0; i < N; i++) {
+    const t = i / N;
+    chirp[i] = Math.sin(TAU * (5*t + 40*t*t));
+  }
+
+  // Draw chirp
+  (function() {
+    const { ctx, w, h } = getCtx('cChirp');
+    drawGrid(ctx, w, h, 2, 8);
+    const pts = [];
+    for (let i = 0; i < N; i++) {
+      pts.push([i/N*w, h/2 - chirp[i]*h*0.38]);
+    }
+    drawFilledLine(ctx, pts, COL.signal, h/2, 0.06);
+  })();
+
+  // Simple FFT magnitude (DFT)
+  (function() {
+    const { ctx, w, h } = getCtx('cFFT');
+    drawGrid(ctx, w, h, 3, 6);
+    const mag = new Float64Array(N/2);
+    let maxM = 0;
+    for (let k = 0; k < N/2; k++) {
+      let re = 0, im = 0;
+      for (let n = 0; n < N; n++) {
+        const angle = -TAU * k * n / N;
+        re += chirp[n] * Math.cos(angle);
+        im += chirp[n] * Math.sin(angle);
+      }
+      mag[k] = Math.sqrt(re*re + im*im);
+      if (mag[k] > maxM) maxM = mag[k];
+    }
+    const pts = [];
+    for (let k = 1; k < N/2; k++) {
+      pts.push([k/(N/2)*w, h - 20 - (mag[k]/maxM)*(h-40)]);
+    }
+    drawFilledLine(ctx, pts, COL.accent2, h-20, 0.15);
+    ctx.fillStyle = COL.text;
+    ctx.font = '11px JetBrains Mono';
+    ctx.fillText('Frequency →', w - 90, h - 5);
+  })();
+
+  // Scalogram (simple CWT with Morlet)
+  (function() {
+    const { ctx, w, h, canvas } = getCtx('cScalogram');
+    const nScales = 60;
+    const scaleMin = 1, scaleMax = 30;
+    const imgData = ctx.createImageData(canvas.width, canvas.height);
+    const dpr = window.devicePixelRatio || 1;
+    const pw = Math.round(w * dpr), ph = Math.round(h * dpr);
+
+    let maxV = 0;
+    const grid = [];
+    for (let si = 0; si < nScales; si++) {
+      const s = scaleMin + (scaleMax - scaleMin) * si / nScales;
+      const row = new Float64Array(N);
+      for (let bi = 0; bi < N; bi++) {
+        let sum = 0;
+        for (let n = 0; n < N; n++) {
+          const t = (n - bi) / s;
+          const wav = Math.cos(5*t) * Math.exp(-0.5*t*t);
+          sum += chirp[n] * wav;
+        }
+        row[bi] = Math.abs(sum / Math.sqrt(s));
+        if (row[bi] > maxV) maxV = row[bi];
+      }
+      grid.push(row);
+    }
+
+    // Render to image
+    for (let py = 0; py < ph; py++) {
+      const si = Math.floor(py / ph * nScales);
+      for (let px = 0; px < pw; px++) {
+        const bi = Math.floor(px / pw * N);
+        const v = grid[si][bi] / maxV;
+        const idx = (py * pw + px) * 4;
+        // Blue to purple to orange colormap
+        const r = Math.round(v * 255 * Math.min(1, v * 2));
+        const g = Math.round(v * 120 * (1-v));
+        const b_ = Math.round((1-v*0.5) * 200 * v + 30 * v);
+        imgData.data[idx] = Math.min(255, r + 20);
+        imgData.data[idx+1] = Math.min(255, g);
+        imgData.data[idx+2] = Math.min(255, b_ + 60*v);
+        imgData.data[idx+3] = 255;
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+    // Labels
+    ctx.fillStyle = 'rgba(226,228,233,0.8)';
+    ctx.font = `${11*dpr}px JetBrains Mono`;
+    ctx.fillText('Time →', (w-60)*dpr, (h-5)*dpr);
+    ctx.fillText('Scale ↑', 5*dpr, 15*dpr);
+  })();
+})();
+
+// ═══════ 3. MOTHER WAVELETS ═══════
+(function() {
+  let current = 'morlet';
+  let animT = 0;
+  const names = {
+    morlet: 'Morlet Wavelet',
+    haar: 'Haar Wavelet',
+    mexhat: 'Mexican Hat (Ricker)',
+    db4: 'Daubechies-4 (approx.)'
+  };
+  const colors = {
+    morlet: COL.accent,
+    haar: COL.accent4,
+    mexhat: COL.accent2,
+    db4: COL.accent3
+  };
+  const descriptions = {
+    morlet: 'Complex sinusoid × Gaussian envelope. Optimal for smooth, oscillatory signals.',
+    haar: 'Step function. Captures sharp edges and discontinuities.',
+    mexhat: 'Second derivative of Gaussian. Detects peaks, ridges, and curvature.',
+    db4: 'Compact support, 4 coefficients. Balances smoothness and localisation.'
+  };
+
+  const { ctx, w, h } = getCtx('cWavelets');
+
+  function draw() {
+    animT += 0.015;
+    ctx.clearRect(0,0,w,h);
+    drawGrid(ctx, w, h, 4, 8);
+
+    const fn = waveletFns[current];
+    const col = colors[current];
+    const baseY = h * 0.45;
+
+    // Draw at 3 different scales
+    const scales = [0.6, 1.0, 2.0];
+    const alphas = [0.3, 1.0, 0.3];
+    const labels = ['s = 0.6', 's = 1.0', 's = 2.0'];
+
+    scales.forEach((s, idx) => {
+      const pts = [];
+      const yOff = baseY;
+      for (let px = 0; px < w; px++) {
+        const t = -4 + 8*(px/w);
+        const v = fn(t, s);
+        pts.push([px, yOff - v * 90]);
+      }
+      ctx.globalAlpha = alphas[idx];
+      drawFilledLine(ctx, pts, col, yOff, 0.08);
+      ctx.globalAlpha = 1;
+
+      // Label
+      ctx.fillStyle = col;
+      ctx.font = '11px JetBrains Mono';
+      const labelX = w - 80;
+      ctx.globalAlpha = alphas[idx];
+      ctx.fillText(labels[idx], labelX, yOff - 70 + idx*15);
+      ctx.globalAlpha = 1;
+    });
+
+    // Title & description
+    ctx.fillStyle = COL.text;
+    ctx.font = 'bold 14px Source Sans 3';
+    ctx.fillText(names[current], 15, 25);
+    ctx.font = '12px Source Sans 3';
+    ctx.fillStyle = COL.text + 'aa';
+    ctx.fillText(descriptions[current], 15, 45);
+
+    // Animated scanning wavelet at bottom
+    const scanY = h * 0.82;
+    const scanPos = (Math.sin(animT) * 0.4);
+    ctx.fillStyle = COL.text + '44';
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillText('Animated wavelet in motion →', 15, scanY - 35);
+    const scanPts = [];
+    for (let px = 0; px < w; px++) {
+      const t = -4 + 8*(px/w);
+      scanPts.push([px, scanY - fn(t - scanPos * 3, 1.0 + 0.3*Math.sin(animT*0.7)) * 40]);
+    }
+    drawFilledLine(ctx, scanPts, col, scanY, 0.1);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+
+  document.querySelectorAll('#waveletBtns .btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#waveletBtns .btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      current = btn.dataset.w;
+    });
+  });
+})();
+
+// ═══════ 4. CWT ANIMATION ═══════
+(function() {
+  const { ctx, w, h } = getCtx('cCWT');
+  const N = 256;
+  const nScales = 40;
+
+  // Composite signal
+  const sig = new Float64Array(N);
+  for (let i = 0; i < N; i++) {
+    const t = i / N;
+    if (t < 0.3) sig[i] = Math.sin(TAU * 3 * t);
+    else if (t < 0.6) sig[i] = Math.sin(TAU * 12 * t);
+    else sig[i] = Math.sin(TAU * 5 * t) + 0.5*Math.sin(TAU * 20 * t);
+  }
+
+  // Pre-compute scalogram
+  const scaleMin = 1, scaleMax = 20;
+  const scalo = [];
+  let maxV = 0;
+  for (let si = 0; si < nScales; si++) {
+    const s = scaleMin + (scaleMax-scaleMin) * si/nScales;
+    const row = new Float64Array(N);
+    for (let bi = 0; bi < N; bi++) {
+      let sum = 0;
+      for (let n = 0; n < N; n++) {
+        const t = (n-bi)/s;
+        sum += sig[n] * Math.cos(5*t)*Math.exp(-0.5*t*t);
+      }
+      row[bi] = Math.abs(sum/Math.sqrt(s));
+      if (row[bi] > maxV) maxV = row[bi];
+    }
+    scalo.push(row);
+  }
+
+  let animating = false, animScale = 0, animPos = 0, speed = 1;
+  const playBtn = document.getElementById('cwtPlay');
+  const resetBtn = document.getElementById('cwtReset');
+  const speedSlider = document.getElementById('cwtSpeed');
+
+  playBtn.addEventListener('click', () => {
+    animating = !animating;
+    playBtn.textContent = animating ? '⏸ Pause' : '▶ Animate';
+  });
+  resetBtn.addEventListener('click', () => {
+    animScale = 0; animPos = 0;
+    animating = false;
+    playBtn.textContent = '▶ Animate';
+  });
+  speedSlider.addEventListener('input', () => speed = parseFloat(speedSlider.value));
+
+  function draw() {
+    ctx.clearRect(0,0,w,h);
+
+    const sigH = h * 0.25;
+    const scaloTop = h * 0.32;
+    const scaloH = h * 0.63;
+
+    // Grid
+    drawGrid(ctx, w, sigH, 2, 8);
+
+    // Signal
+    const pts = [];
+    for (let i = 0; i < N; i++) pts.push([i/N*w, sigH/2 - sig[i]*sigH*0.35]);
+    drawFilledLine(ctx, pts, COL.signal, sigH/2, 0.06);
+
+    // Current wavelet overlay
+    const curScale = scaleMin + (scaleMax-scaleMin)*animScale/nScales;
+    const curPosN = Math.floor(animPos);
+    const wavPts = [];
+    for (let i = 0; i < N; i++) {
+      const t = (i - curPosN)/curScale;
+      const v = Math.cos(5*t)*Math.exp(-0.5*t*t)/Math.sqrt(curScale);
+      wavPts.push([i/N*w, sigH/2 - v*sigH*0.25]);
+    }
+    drawLine(ctx, wavPts, COL.accent + '88', 1.5);
+
+    // Scalogram (up to current animation point)
+    const maxRow = Math.min(nScales, Math.floor(animScale) + 1);
+    for (let si = 0; si < maxRow; si++) {
+      const y0 = scaloTop + (si/nScales)*scaloH;
+      const y1 = scaloTop + ((si+1)/nScales)*scaloH;
+      const maxCol = (si < Math.floor(animScale)) ? N : Math.min(N, Math.floor(animPos));
+      for (let bi = 0; bi < maxCol; bi++) {
+        const v = scalo[si][bi] / maxV;
+        const r = Math.round(v * 255 * Math.min(1, v*2));
+        const g = Math.round(v * 120 * (1-v));
+        const b_ = Math.round((1-v*0.5) * 200 * v + 30*v);
+        ctx.fillStyle = `rgb(${Math.min(255,r+20)},${Math.min(255,g)},${Math.min(255,b_+60*v)})`;
+        const px0 = bi/N*w, px1 = (bi+1)/N*w;
+        ctx.fillRect(px0, y0, px1-px0+1, y1-y0+1);
+      }
+    }
+
+    // Border
+    ctx.strokeStyle = COL.grid;
+    ctx.strokeRect(0, scaloTop, w, scaloH);
+
+    // Labels
+    ctx.fillStyle = COL.text;
+    ctx.font = '11px JetBrains Mono';
+    ctx.fillText('Signal x(t)', 8, 14);
+    ctx.fillText('Scalogram W(a,b)', 8, scaloTop + 14);
+    ctx.fillText('Time →', w - 60, h - 4);
+    ctx.save();
+    ctx.translate(12, scaloTop + scaloH/2);
+    ctx.rotate(-Math.PI/2);
+    ctx.fillText('Scale →', -30, 0);
+    ctx.restore();
+
+    // Scanning indicator
+    if (animating && animScale < nScales) {
+      const scanY = scaloTop + (animScale/nScales)*scaloH;
+      ctx.strokeStyle = COL.accent + '66';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4,4]);
+      ctx.beginPath(); ctx.moveTo(0,scanY); ctx.lineTo(w,scanY); ctx.stroke();
+      ctx.setLineDash([]);
+
+      const scanX = animPos/N*w;
+      ctx.beginPath(); ctx.moveTo(scanX,0); ctx.lineTo(scanX,scanY); ctx.stroke();
+    }
+
+    // Animate
+    if (animating) {
+      animPos += speed * 4;
+      if (animPos >= N) {
+        animPos = 0;
+        animScale += 1;
+        if (animScale >= nScales) {
+          animScale = nScales;
+          animating = false;
+          playBtn.textContent = '▶ Animate';
+        }
+      }
+    }
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ═══════ 5. DWT ANIMATION ═══════
+(function() {
+  const { ctx, w, h } = getCtx('cDWT');
+  const N = 256;
+
+  // Signal
+  const sig = new Float64Array(N);
+  for (let i = 0; i < N; i++) {
+    const t = i/N;
+    sig[i] = Math.sin(TAU*2*t) + 0.5*Math.sin(TAU*8*t) + 0.3*Math.sin(TAU*32*t) + 0.15*(Math.random()-0.5);
+  }
+
+  // Simple Haar DWT
+  function haarDWT(x) {
+    const n = x.length;
+    const approx = new Float64Array(n/2);
+    const detail = new Float64Array(n/2);
+    for (let i = 0; i < n/2; i++) {
+      approx[i] = (x[2*i] + x[2*i+1]) / Math.SQRT2;
+      detail[i] = (x[2*i] - x[2*i+1]) / Math.SQRT2;
+    }
+    return { approx, detail };
+  }
+
+  const levels = 4;
+  const decomp = [{ signal: sig }];
+  let current = sig;
+  for (let l = 0; l < levels; l++) {
+    const { approx, detail } = haarDWT(current);
+    decomp.push({ approx, detail, level: l+1 });
+    current = approx;
+  }
+
+  let animLevel = 0, animProgress = 0, animating = false;
+  const animBtn = document.getElementById('dwtAnimate');
+  const resetBtn = document.getElementById('dwtReset');
+
+  animBtn.addEventListener('click', () => {
+    animating = !animating;
+    animBtn.textContent = animating ? '⏸ Pause' : '▶ Decompose';
+  });
+  resetBtn.addEventListener('click', () => {
+    animLevel = 0; animProgress = 0; animating = false;
+    animBtn.textContent = '▶ Decompose';
+  });
+
+  const rowColors = [COL.signal, COL.accent, COL.accent3, COL.accent2, COL.accent4];
+
+  function draw() {
+    ctx.clearRect(0,0,w,h);
+
+    const rowH = h / (levels + 1.5);
+    const margin = 5;
+
+    // Original signal
+    ctx.fillStyle = COL.text;
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillText('Original', 5, 12);
+    const pts = [];
+    for (let i = 0; i < N; i++) pts.push([i/N*w, rowH*0.5 - sig[i]*rowH*0.3]);
+    drawLine(ctx, pts, COL.signal + 'aa', 1.5);
+
+    // Decomposition levels
+    const showLevels = Math.min(levels, Math.floor(animLevel) + 1);
+    for (let l = 0; l < showLevels; l++) {
+      const d = decomp[l+1];
+      const yBase = rowH * (l + 1.3);
+      const segLen = d.approx.length;
+      const progress = (l < Math.floor(animLevel)) ? 1 : Math.min(1, animProgress);
+      const showN = Math.floor(segLen * progress);
+
+      // Approximation (left half)
+      ctx.fillStyle = COL.text + '88';
+      ctx.font = '10px JetBrains Mono';
+      ctx.fillText(`L${l+1} Approx`, 5, yBase - rowH*0.32);
+
+      const halfW = w * 0.48;
+      let maxA = 0, maxD = 0;
+      for (let i = 0; i < segLen; i++) {
+        if (Math.abs(d.approx[i]) > maxA) maxA = Math.abs(d.approx[i]);
+        if (Math.abs(d.detail[i]) > maxD) maxD = Math.abs(d.detail[i]);
+      }
+      maxA = maxA || 1; maxD = maxD || 1;
+
+      const aPts = [];
+      for (let i = 0; i < showN; i++) {
+        aPts.push([i/segLen*halfW, yBase - (d.approx[i]/maxA)*rowH*0.28]);
+      }
+      if (aPts.length > 1) drawLine(ctx, aPts, rowColors[l+1], 1.5);
+
+      // Detail (right half)
+      ctx.fillStyle = COL.text + '88';
+      ctx.fillText(`L${l+1} Detail`, w*0.52 + 5, yBase - rowH*0.32);
+
+      const dPts = [];
+      for (let i = 0; i < showN; i++) {
+        dPts.push([w*0.52 + i/segLen*halfW, yBase - (d.detail[i]/maxD)*rowH*0.28]);
+      }
+      if (dPts.length > 1) drawLine(ctx, dPts, rowColors[l+1] + '88', 1.5);
+
+      // Divider
+      ctx.strokeStyle = COL.grid;
+      ctx.lineWidth = 0.5;
+      ctx.setLineDash([3,3]);
+      ctx.beginPath();
+      ctx.moveTo(w*0.5, yBase - rowH*0.4);
+      ctx.lineTo(w*0.5, yBase + rowH*0.1);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Arrow down
+      if (l < showLevels - 1 || animating) {
+        const arrowY = yBase + rowH*0.15;
+        ctx.strokeStyle = COL.accent + '44';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(halfW*0.25, arrowY);
+        ctx.lineTo(halfW*0.25, arrowY + rowH*0.15);
+        ctx.stroke();
+        ctx.fillStyle = COL.accent + '44';
+        ctx.beginPath();
+        ctx.moveTo(halfW*0.25 - 4, arrowY + rowH*0.12);
+        ctx.lineTo(halfW*0.25 + 4, arrowY + rowH*0.12);
+        ctx.lineTo(halfW*0.25, arrowY + rowH*0.2);
+        ctx.fill();
+      }
+    }
+
+    // Filter bank labels
+    ctx.fillStyle = COL.accent + '55';
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillText('↓ Low-pass (h) → Approx    |    ↓ High-pass (g) → Detail', w*0.15, h - 8);
+
+    if (animating) {
+      animProgress += 0.015;
+      if (animProgress >= 1) {
+        animProgress = 0;
+        animLevel += 1;
+        if (animLevel >= levels) {
+          animLevel = levels;
+          animating = false;
+          animBtn.textContent = '▶ Decompose';
+        }
+      }
+    }
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ═══════ 6. MULTIRESOLUTION ═══════
+(function() {
+  const { ctx, w, h } = getCtx('cMRA');
+  let sigType = 'composite';
+
+  function genSignal(type, N) {
+    const s = new Float64Array(N);
+    for (let i = 0; i < N; i++) {
+      const t = i/N;
+      if (type === 'composite') {
+        s[i] = Math.sin(TAU*2*t) + 0.5*Math.sin(TAU*10*t) + 0.25*Math.sin(TAU*40*t);
+      } else if (type === 'step') {
+        s[i] = (t > 0.5 ? 0.8 : -0.3) + 0.4*Math.sin(TAU*6*t);
+      } else {
+        s[i] = Math.sin(TAU*4*t) + 0.6*(Math.random()-0.5);
+      }
+    }
+    return s;
+  }
+
+  function haarDWT(x) {
+    const n = x.length;
+    const a = new Float64Array(n/2);
+    const d = new Float64Array(n/2);
+    for (let i = 0; i < n/2; i++) {
+      a[i] = (x[2*i] + x[2*i+1]) / Math.SQRT2;
+      d[i] = (x[2*i] - x[2*i+1]) / Math.SQRT2;
+    }
+    return { a, d };
+  }
+
+  const N = 512;
+  const levels = 4;
+  let animPhase = 0;
+
+  function draw() {
+    animPhase += 0.01;
+    ctx.clearRect(0,0,w,h);
+
+    const sig = genSignal(sigType, N);
+    const rowH = h / (levels + 1.2);
+    const colors = [COL.signal, COL.accent, COL.accent3, COL.accent2, COL.accent4];
+
+    // Original
+    let maxV = 0;
+    for (let i = 0; i < N; i++) if (Math.abs(sig[i]) > maxV) maxV = Math.abs(sig[i]);
+    maxV = maxV || 1;
+
+    const drawRow = (data, yCenter, color, label) => {
+      let mx = 0;
+      for (let i = 0; i < data.length; i++) if (Math.abs(data[i]) > mx) mx = Math.abs(data[i]);
+      mx = mx || 1;
+      const pts = [];
+      for (let i = 0; i < data.length; i++) {
+        pts.push([i/data.length*w, yCenter - (data[i]/mx)*rowH*0.32]);
+      }
+      drawLine(ctx, pts, color, 1.5);
+      ctx.fillStyle = color;
+      ctx.font = '10px JetBrains Mono';
+      ctx.fillText(label, 5, yCenter - rowH*0.35);
+    };
+
+    drawRow(sig, rowH*0.45, colors[0], 'Original signal');
+
+    // Decompose
+    let current = sig;
+    for (let l = 0; l < levels; l++) {
+      const { a, d } = haarDWT(current);
+      const yCenter = rowH * (l + 1.45);
+
+      // Animated glow on detail
+      const glow = 0.6 + 0.4*Math.sin(animPhase + l);
+      ctx.globalAlpha = glow;
+      drawRow(d, yCenter, colors[l+1], `Detail D${l+1} (${Math.pow(2,l+1)}× scale)`);
+      ctx.globalAlpha = 1;
+
+      // Light separator
+      ctx.strokeStyle = COL.grid;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(0, yCenter + rowH*0.42);
+      ctx.lineTo(w, yCenter + rowH*0.42);
+      ctx.stroke();
+
+      current = a;
+    }
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+
+  document.querySelectorAll('.mra-sig').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.mra-sig').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      sigType = btn.dataset.s;
+    });
+  });
+})();
+
+// ═══════ 7. DENOISING ═══════
+(function() {
+  const { ctx, w, h } = getCtx('cDenoise');
+  const N = 512;
+  const noiseSlider = document.getElementById('noiseLevel');
+  const threshSlider = document.getElementById('threshold');
+  const applyBtn = document.getElementById('denoiseApply');
+
+  // Clean signal
+  const clean = new Float64Array(N);
+  for (let i = 0; i < N; i++) {
+    const t = i/N;
+    clean[i] = Math.sin(TAU*3*t) + 0.5*Math.sin(TAU*7*t);
+  }
+
+  let noiseCache = new Float64Array(N);
+  for (let i = 0; i < N; i++) noiseCache[i] = (Math.random()-0.5)*2;
+
+  let denoised = null;
+  let animT = 0;
+
+  function haarDWT(x) {
+    const n = x.length;
+    const a = new Float64Array(n/2);
+    const d = new Float64Array(n/2);
+    for (let i = 0; i < n/2; i++) {
+      a[i] = (x[2*i]+x[2*i+1])/Math.SQRT2;
+      d[i] = (x[2*i]-x[2*i+1])/Math.SQRT2;
+    }
+    return {a,d};
+  }
+  function haarIDWT(a,d) {
+    const n = a.length*2;
+    const x = new Float64Array(n);
+    for (let i = 0; i < a.length; i++) {
+      x[2*i] = (a[i]+d[i])/Math.SQRT2;
+      x[2*i+1] = (a[i]-d[i])/Math.SQRT2;
+    }
+    return x;
+  }
+
+  function denoise(sig, thresh) {
+    // 3-level DWT
+    const l1 = haarDWT(sig);
+    const l2 = haarDWT(l1.a);
+    const l3 = haarDWT(l2.a);
+
+    // Soft threshold details
+    const soft = (v, t) => Math.sign(v) * Math.max(0, Math.abs(v) - t);
+    const maxD = Math.max(...l1.d.map(Math.abs), ...l2.d.map(Math.abs), ...l3.d.map(Math.abs)) || 1;
+    const tVal = thresh * maxD;
+
+    const d1 = l1.d.map(v => soft(v, tVal));
+    const d2 = l2.d.map(v => soft(v, tVal));
+    const d3 = l3.d.map(v => soft(v, tVal));
+
+    // Reconstruct
+    const r2 = haarIDWT(l3.a, d3);
+    const r1 = haarIDWT(r2, d2);
+    return haarIDWT(r1, d1);
+  }
+
+  applyBtn.addEventListener('click', () => {
+    const nLevel = parseFloat(noiseSlider.value);
+    const noisy = new Float64Array(N);
+    for (let i = 0; i < N; i++) noisy[i] = clean[i] + noiseCache[i] * nLevel;
+    denoised = denoise(noisy, parseFloat(threshSlider.value));
+    animT = 0;
+  });
+
+  function draw() {
+    animT += 0.02;
+    const nLevel = parseFloat(noiseSlider.value);
+    ctx.clearRect(0,0,w,h);
+    drawGrid(ctx, w, h, 4, 8);
+
+    const y1 = h * 0.25, y2 = h * 0.55, y3 = h * 0.85;
+
+    // Clean
+    const cPts = [];
+    for (let i = 0; i < N; i++) cPts.push([i/N*w, y1 - clean[i]*h*0.12]);
+    drawLine(ctx, cPts, COL.accent3, 1.5);
+    ctx.fillStyle = COL.accent3;
+    ctx.font = '10px JetBrains Mono';
+    ctx.fillText('Clean signal', 5, y1 - h*0.14);
+
+    // Noisy
+    const nPts = [];
+    for (let i = 0; i < N; i++) {
+      nPts.push([i/N*w, y2 - (clean[i] + noiseCache[i]*nLevel)*h*0.12]);
+    }
+    drawLine(ctx, nPts, COL.accent4 + 'aa', 1);
+    ctx.fillStyle = COL.accent4;
+    ctx.fillText('Noisy signal', 5, y2 - h*0.14);
+
+    // Denoised
+    if (denoised) {
+      const progress = Math.min(1, animT);
+      const showN = Math.floor(N * progress);
+      const dPts = [];
+      for (let i = 0; i < showN; i++) dPts.push([i/N*w, y3 - denoised[i]*h*0.12]);
+      if (dPts.length > 1) {
+        drawLine(ctx, dPts, COL.accent, 2);
+        // Ghost of clean
+        const gPts = [];
+        for (let i = 0; i < showN; i++) gPts.push([i/N*w, y3 - clean[i]*h*0.12]);
+        drawLine(ctx, gPts, COL.accent3 + '44', 1);
+      }
+      ctx.fillStyle = COL.accent;
+      ctx.fillText('Denoised (wavelet thresholding)', 5, y3 - h*0.14);
+    } else {
+      ctx.fillStyle = COL.text + '44';
+      ctx.font = '12px Source Sans 3';
+      ctx.fillText('Click "Apply Denoising" to see the result →', w*0.25, y3);
+    }
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ═══════ SCROLL REVEAL ═══════
+(function() {
+  const sections = document.querySelectorAll('section:not(.hero)');
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) e.target.classList.add('visible');
+    });
+  }, { threshold: 0.1 });
+  sections.forEach(s => obs.observe(s));
+})();
+</script>
+</body>
+</html>
