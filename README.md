@@ -31,38 +31,6 @@ Choose from three signal types (composite, step+sine, noisy sine) and see them d
 ### 7 · Denoising Application
 Add noise to a clean signal, then apply wavelet thresholding to recover it. Interactive controls for noise level and threshold, with an animated reconstruction sweep.
 
----
-
-## Deploy to GitHub Pages
-
-This is a single-file project — `index.html` contains everything.
-
-**Option A — Repository root:**
-
-```bash
-git init wavelet-guide && cd wavelet-guide
-# copy index.html into this directory
-git add index.html
-git commit -m "Initial commit"
-git remote add origin git@github.com:yourusername/wavelet-guide.git
-git push -u origin main
-```
-
-Then go to **Settings → Pages → Source → Deploy from a branch → `main` / `/ (root)`**.
-
-**Option B — `docs/` folder** (if you want to keep other files at the root):
-
-```bash
-mkdir docs
-cp index.html docs/
-git add docs/
-git commit -m "Add guide to docs/"
-git push
-```
-
-Set Pages source to `main` / `/docs`.
-
-Your guide will be live at `https://yourusername.github.io/wavelet-guide/`.
 
 ---
 
