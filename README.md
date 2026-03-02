@@ -2,7 +2,7 @@
 
 An interactive, animated guide to understanding wavelet transforms, built entirely with vanilla HTML Canvas and JavaScript. No dependencies, no build step — just open `index.html`.
 
-**[→ View the Live Guide](https://yourusername.github.io/wavelet-guide/)**
+**[→ View the Live Guide]([https://brendanjameslynskey.github.io/WaveletTransformGuide/])**
 
 ---
 
